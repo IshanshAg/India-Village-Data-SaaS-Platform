@@ -9,6 +9,7 @@ const bcrypt = require("bcrypt");
 const app = express();
 const prisma = new PrismaClient();
 const router = express.Router();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors({
   origin: ["http://localhost:3001"],
@@ -269,6 +270,6 @@ app.use("/v1", router);
 /* ===============================
    SERVER
 ================================ */
-app.listen(3000, () => {
-  console.log("Server running on port 3000 🚀");
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT} 🚀`);
 });
