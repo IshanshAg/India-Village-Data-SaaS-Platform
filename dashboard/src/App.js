@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 
 function App() {
-  const BASE_URL = "http://localhost:3000/v1";
+  const BASE_URL = "https://your-render-url.onrender.com/v1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,12 +28,12 @@ function App() {
 
   /* ================= AUTH ================= */
   const signup = async () => {
-    await axios.post("http://localhost:3000/signup", { email, password });
+    await axios.post("https://your-render-url.onrender.com/signup", { email, password });
     alert("Signup successful");
   };
 
   const login = async () => {
-    const res = await axios.post("http://localhost:3000/login", {
+    const res = await axios.post("https://your-render-url.onrender.com/login", {
       email,
       password,
     });
@@ -42,7 +42,7 @@ function App() {
 
   const generateKey = async () => {
     const res = await axios.post(
-      "http://localhost:3000/generate-key",
+      "https://your-render-url.onrender.com/generate-key",
       {},
       { headers: { Authorization: token } }
     );
