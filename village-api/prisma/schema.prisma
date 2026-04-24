@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Country {
+  id      Int     @id @default(autoincrement())
+  name    String
+  code    String  
+
+  states  State[]
+}
+
+model State {
+  id         Int        @id @default(autoincrement())
+  name       String
+  code       String
+  countryId  Int
+
+  country    Country    @relation(fields: [countryId], references: [id])
+  districts  District[]
+
+  @@index([countryId])
+}
+
+model District {
+  id        Int       @id @default(autoincrement())
+  name      String
+  code      String
+  stateId   Int
+
+  state     State     @relation(fields: [stateId], references: [id])
+  subDistricts SubDistrict[]
+
+  @@index([stateId])
+}
+
+model SubDistrict {
+  id         Int       @id @default(autoincrement())
+  name       String
+  code       String
+  districtId Int
+
+  district   District  @relation(fields: [districtId], references: [id])
+  villages   Village[]
+
+  @@index([districtId])
+}
+
+model Village {
+  id             Int       @id @default(autoincrement())
+  name           String
+  code           String
+  subDistrictId  Int
+
+  subDistrict    SubDistrict @relation(fields: [subDistrictId], references: [id])
+
+  @@index([name])
+  @@index([subDistrictId])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  planType  String   // free, premium, pro
+
+  apiKeys   ApiKey[]
+  logs      ApiLog[]
+}
+
+model ApiKey {
+  id         Int      @id @default(autoincrement())
+  key        String   @unique
+  secretHash String
+  userId     Int
+
+  user       User     @relation(fields: [userId], references: [id])
+  logs       ApiLog[]
+
+  @@index([key])
+}
+
+model ApiLog {
+  id           Int      @id @default(autoincrement())
+  endpoint     String
+  responseTime Int
+  userId       Int
+  apiKeyId     Int
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id])
+  apiKey       ApiKey   @relation(fields: [apiKeyId], references: [id])
+
+  @@index([createdAt])
+  @@index([userId])
+}
