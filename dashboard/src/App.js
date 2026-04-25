@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import "./App.css";
 
 function App() {
   const API_BASE = "https://india-village-data-saas-platform-2.onrender.com";
@@ -27,18 +28,18 @@ function App() {
 
   /* AUTH */
   const signup = async () => {
-    await axios.post(`https://india-village-data-saas-platform-2.onrender.com/signup`, { email, password });
+    await axios.post(`${API_BASE}/signup`, { email, password });
     alert("Signup success");
   };
 
   const login = async () => {
-    const res = await axios.post(`https://india-village-data-saas-platform-2.onrender.com/login`, { email, password });
+    const res = await axios.post(`${API_BASE}/login`, { email, password });
     setToken(res.data.token);
   };
 
   const generateKey = async () => {
     const res = await axios.post(
-      `https://india-village-data-saas-platform-2.onrender.com/generate-key`,
+      `${API_BASE}/generate-key`,
       {},
       { headers: { Authorization: token } }
     );
@@ -70,7 +71,10 @@ function App() {
   /* SEARCH */
   const handleSearch = async (value) => {
     setSearch(value);
-    if (value.length < 2) return;
+    if (value.length < 2) {
+      setResults([]);
+      return;
+    }
 
     const res = await axios.get(`${BASE_URL}/autocomplete?q=${value}`, {
       headers,
@@ -80,46 +84,82 @@ function App() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Village API Dashboard</h2>
+    <div className="app">
+      <div className="container">
+        <h1>🌍 Village Data Dashboard</h1>
 
-      <input placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
-      <input placeholder="Password" type="password" onChange={(e) => setPassword(e.target.value)} />
+        {/* AUTH CARD */}
+        <div className="card">
+          <h3>Authentication</h3>
 
-      <button onClick={signup}>Signup</button>
-      <button onClick={login}>Login</button>
+          <div className="row">
+            <input placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
+            <input type="password" placeholder="Password" onChange={(e) => setPassword(e.target.value)} />
+          </div>
 
-      <button onClick={generateKey}>Generate Key</button>
+          <div className="row">
+            <button onClick={signup}>Signup</button>
+            <button onClick={login}>Login</button>
+            <button onClick={generateKey}>Generate Key</button>
+          </div>
 
-      <hr />
+          {apiKey && (
+            <div className="key-box">
+              <p><strong>API Key:</strong> {apiKey}</p>
+              <p><strong>Secret:</strong> {apiSecret}</p>
+            </div>
+          )}
+        </div>
 
-      <button onClick={loadStates}>Load States</button>
+        {/* DATA CARD */}
+        <div className="card">
+          <h3>Location Explorer</h3>
 
-      <select onChange={(e) => loadDistricts(e.target.value)}>
-        {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-      </select>
+          <button className="primary" onClick={loadStates}>
+            Load States
+          </button>
 
-      <select onChange={(e) => loadSubDistricts(e.target.value)}>
-        {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-      </select>
+          <div className="row">
+            <select onChange={(e) => loadDistricts(e.target.value)}>
+              <option>Select State</option>
+              {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
 
-      <select onChange={(e) => loadVillages(e.target.value)}>
-        {subDistricts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-      </select>
+            <select onChange={(e) => loadSubDistricts(e.target.value)}>
+              <option>Select District</option>
+              {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
 
-      <input
-        placeholder="Search..."
-        value={search}
-        onChange={(e) => handleSearch(e.target.value)}
-      />
+            <select onChange={(e) => loadVillages(e.target.value)}>
+              <option>Select Subdistrict</option>
+              {subDistricts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
 
-      {results.map((r, i) => (
-        <div key={i}>{r.name}</div>
-      ))}
+          <div className="results">
+            {villages.map(v => (
+              <div key={v.id} className="item">{v.name}</div>
+            ))}
+          </div>
+        </div>
 
-      {villages.map((v) => (
-        <div key={v.id}>{v.name}</div>
-      ))}
+        {/* SEARCH CARD */}
+        <div className="card">
+          <h3>Search Villages</h3>
+
+          <input
+            placeholder="Type village name..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+
+          <div className="results">
+            {results.map((r, i) => (
+              <div key={i} className="item">{r.name}</div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
