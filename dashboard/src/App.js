@@ -21,6 +21,8 @@ function App() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
 
+  const [loading, setLoading] = useState(false);
+
   const headers = {
     "x-api-key": apiKey,
     "x-api-secret": apiSecret,
@@ -49,8 +51,10 @@ function App() {
 
   /* DATA */
   const loadStates = async () => {
+    setLoading(true);
     const res = await axios.get(`${BASE_URL}/states`, { headers });
     setStates(res.data.data);
+    setLoading(false);
   };
 
   const loadDistricts = async (id) => {
@@ -86,11 +90,28 @@ function App() {
   return (
     <div className="app">
       <div className="container">
-        <h1>🌍 Village Data Dashboard</h1>
 
-        {/* AUTH CARD */}
+        <h1>🚀 GeoNest Dashboard</h1>
+
+        {/* STATS */}
+        <div className="stats">
+          <div className="stat">
+            <h3>{states.length}</h3>
+            <p>States</p>
+          </div>
+          <div className="stat">
+            <h3>{districts.length}</h3>
+            <p>Districts</p>
+          </div>
+          <div className="stat">
+            <h3>{villages.length}</h3>
+            <p>Villages</p>
+          </div>
+        </div>
+
+        {/* AUTH */}
         <div className="card">
-          <h3>Authentication</h3>
+          <h3>🔐 Authentication</h3>
 
           <div className="row">
             <input placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
@@ -105,18 +126,18 @@ function App() {
 
           {apiKey && (
             <div className="key-box">
-              <p><strong>API Key:</strong> {apiKey}</p>
-              <p><strong>Secret:</strong> {apiSecret}</p>
+              <p>🔑 {apiKey}</p>
+              <p>🔒 {apiSecret}</p>
             </div>
           )}
         </div>
 
-        {/* DATA CARD */}
+        {/* DATA */}
         <div className="card">
-          <h3>Location Explorer</h3>
+          <h3>🌍 Location Explorer</h3>
 
           <button className="primary" onClick={loadStates}>
-            Load States
+            {loading ? "Loading..." : "Load States"}
           </button>
 
           <div className="row">
@@ -143,9 +164,9 @@ function App() {
           </div>
         </div>
 
-        {/* SEARCH CARD */}
+        {/* SEARCH */}
         <div className="card">
-          <h3>Search Villages</h3>
+          <h3>🔍 Smart Search</h3>
 
           <input
             placeholder="Type village name..."
@@ -153,12 +174,15 @@ function App() {
             onChange={(e) => handleSearch(e.target.value)}
           />
 
-          <div className="results">
+          <div className="dropdown">
             {results.map((r, i) => (
-              <div key={i} className="item">{r.name}</div>
+              <div key={i} className="dropdown-item">
+                {r.name}
+              </div>
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );
