@@ -16,7 +16,7 @@ const SECRET = process.env.JWT_SECRET || "mysecret123";
 app.use(cors({
   origin: [
     "http://localhost:3001",
-    "https://your-vercel-app.vercel.app"
+    "https://india-village-data-saa-s-platform-rho.vercel.app"
   ],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-api-secret"]
