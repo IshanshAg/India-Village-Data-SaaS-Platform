@@ -14,12 +14,25 @@ const SECRET = process.env.JWT_SECRET || "mysecret123";
 
 /* ✅ CORS */
 app.use(cors({
-  origin: [
-    "http://localhost:3001",
-    "https://india-village-data-saa-s-platform-rho.vercel.app"
-  ],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (
+      origin.includes("vercel.app") ||
+      origin.includes("localhost")
+    ) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-api-secret"]
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "x-api-key",
+    "x-api-secret"
+  ]
 }));
 
 app.use(express.json());
