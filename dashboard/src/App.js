@@ -109,6 +109,7 @@ function App() {
 
       <input
         placeholder="Search..."
+        value={search}
         onChange={(e) => handleSearch(e.target.value)}
       />
 
