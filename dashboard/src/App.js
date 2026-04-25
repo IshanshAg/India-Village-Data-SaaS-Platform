@@ -27,18 +27,18 @@ function App() {
 
   /* AUTH */
   const signup = async () => {
-    await axios.post(`${API_BASE}/signup`, { email, password });
+    await axios.post(`https://india-village-data-saas-platform-2.onrender.com/signup`, { email, password });
     alert("Signup success");
   };
 
   const login = async () => {
-    const res = await axios.post(`${API_BASE}/login`, { email, password });
+    const res = await axios.post(`https://india-village-data-saas-platform-2.onrender.com/login`, { email, password });
     setToken(res.data.token);
   };
 
   const generateKey = async () => {
     const res = await axios.post(
-      `${API_BASE}/generate-key`,
+      `https://india-village-data-saas-platform-2.onrender.com/generate-key`,
       {},
       { headers: { Authorization: token } }
     );
