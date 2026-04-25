@@ -9,18 +9,14 @@ const app = express();
 const prisma = new PrismaClient();
 const router = express.Router();
 
-/* ===============================
-   🔥 PORT FIX (CRITICAL FOR RENDER)
-================================ */
 const PORT = process.env.PORT || 3000;
+const SECRET = process.env.JWT_SECRET || "mysecret123";
 
-/* ===============================
-   🔥 CORS (ALLOW FRONTEND)
-================================ */
+/* ✅ CORS */
 app.use(cors({
   origin: [
     "http://localhost:3001",
-    "https://your-vercel-app.vercel.app" // update after deploy
+    "https://your-vercel-app.vercel.app"
   ],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-api-secret"]
@@ -28,38 +24,14 @@ app.use(cors({
 
 app.use(express.json());
 
-/* ===============================
-   🔥 ROOT ROUTE (IMPORTANT FOR TEST)
-================================ */
+/* ✅ ROOT */
 app.get("/", (req, res) => {
   res.send("Backend is LIVE 🚀");
 });
 
-/* ===============================
-   🔐 SECRET (USE ENV IN PROD)
-================================ */
-const SECRET = process.env.JWT_SECRET || "mysecret123";
-
-/* ===============================
-   ✅ STANDARD RESPONSE
-================================ */
-function sendResponse(res, data, start) {
-  const responseTime = Date.now() - start;
-
-  res.json({
-    success: true,
-    count: Array.isArray(data) ? data.length : 1,
-    data,
-    meta: { responseTime }
-  });
-}
-
-/* ===============================
-   🔐 JWT AUTH
-================================ */
+/* ================= AUTH ================= */
 function requireLogin(req, res, next) {
   const token = req.headers["authorization"];
-
   if (!token) return res.status(401).json({ error: "Login required" });
 
   try {
@@ -70,37 +42,13 @@ function requireLogin(req, res, next) {
   }
 }
 
-/* ===============================
-   🔐 LIMIT LOGIC
-================================ */
-async function checkUsageLimit(userId) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  return await prisma.apiLog.count({
-    where: {
-      userId,
-      createdAt: { gte: today },
-    },
-  });
-}
-
-function getLimitByPlan(planType) {
-  if (planType === "free") return 100;
-  if (planType === "premium") return 10000;
-  if (planType === "pro") return Infinity;
-  return 100;
-}
-
-/* ===============================
-   🔐 API KEY AUTH
-================================ */
+/* ================= API AUTH ================= */
 async function authenticate(req, res, next) {
   const apiKey = req.headers["x-api-key"];
   const apiSecret = req.headers["x-api-secret"];
 
   if (!apiKey || !apiSecret) {
-    return res.status(401).json({ error: "API key and secret required" });
+    return res.status(401).json({ error: "API key required" });
   }
 
   const key = await prisma.apiKey.findUnique({
@@ -108,32 +56,16 @@ async function authenticate(req, res, next) {
     include: { user: true },
   });
 
-  if (!key) return res.status(403).json({ error: "Invalid API key" });
+  if (!key) return res.status(403).json({ error: "Invalid key" });
 
   const valid = await bcrypt.compare(apiSecret, key.secretHash);
-  if (!valid) return res.status(403).json({ error: "Invalid API secret" });
-
-  const usage = await checkUsageLimit(key.userId);
-  const limit = getLimitByPlan(key.user.planType);
-
-  res.set({
-    "X-RateLimit-Limit": limit,
-    "X-RateLimit-Remaining": limit === Infinity ? "∞" : limit - usage
-  });
-
-  if (usage >= limit) {
-    return res.status(429).json({
-      error: `Daily limit exceeded (${key.user.planType})`,
-    });
-  }
+  if (!valid) return res.status(403).json({ error: "Invalid secret" });
 
   req.apiKey = key;
   next();
 }
 
-/* ===============================
-   🔐 AUTH ROUTES
-================================ */
+/* ================= AUTH ROUTES ================= */
 app.post("/signup", async (req, res) => {
   const { email, password } = req.body;
 
@@ -150,20 +82,15 @@ app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { email } });
-
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: "Invalid password" });
 
   const token = jwt.sign({ userId: user.id }, SECRET);
-
   res.json({ token });
 });
 
-/* ===============================
-   🔑 GENERATE KEY
-================================ */
 app.post("/generate-key", requireLogin, async (req, res) => {
   const apiKey = crypto.randomBytes(16).toString("hex");
   const apiSecret = crypto.randomBytes(32).toString("hex");
@@ -181,103 +108,47 @@ app.post("/generate-key", requireLogin, async (req, res) => {
   res.json({ apiKey, apiSecret });
 });
 
-/* ===============================
-   🌍 LOCATION APIs
-================================ */
+/* ================= DATA ================= */
 router.get("/states", authenticate, async (req, res) => {
-  const start = Date.now();
   const data = await prisma.state.findMany();
-  sendResponse(res, data, start);
+  res.json({ data });
 });
 
 router.get("/districts/:stateId", authenticate, async (req, res) => {
-  const start = Date.now();
   const data = await prisma.district.findMany({
     where: { stateId: Number(req.params.stateId) }
   });
-  sendResponse(res, data, start);
+  res.json({ data });
 });
 
 router.get("/subdistricts/:districtId", authenticate, async (req, res) => {
-  const start = Date.now();
   const data = await prisma.subDistrict.findMany({
     where: { districtId: Number(req.params.districtId) }
   });
-  sendResponse(res, data, start);
+  res.json({ data });
 });
 
 router.get("/villages/:subDistrictId", authenticate, async (req, res) => {
-  const start = Date.now();
   const data = await prisma.village.findMany({
-    where: { subDistrictId: Number(req.params.subDistrictId) },
-    take: 50
+    where: { subDistrictId: Number(req.params.subDistrictId) }
   });
-  sendResponse(res, data, start);
+  res.json({ data });
 });
 
-/* ===============================
-   🔍 SEARCH
-================================ */
-router.get("/search", authenticate, async (req, res) => {
-  const start = Date.now();
-  let { q = "", limit = 20 } = req.query;
-
-  if (q.length < 2) {
-    return res.status(400).json({ error: "Query too short" });
-  }
-
-  const data = await prisma.village.findMany({
-    where: {
-      name: { contains: q, mode: "insensitive" }
-    },
-    take: Number(limit)
-  });
-
-  sendResponse(res, data, start);
-});
-
-/* ===============================
-   ⚡ AUTOCOMPLETE
-================================ */
 router.get("/autocomplete", authenticate, async (req, res) => {
-  const start = Date.now();
   const { q = "" } = req.query;
-
-  if (q.length < 2) {
-    return res.status(400).json({ error: "Query too short" });
-  }
 
   const villages = await prisma.village.findMany({
     where: { name: { contains: q, mode: "insensitive" } },
-    include: {
-      subDistrict: {
-        include: {
-          district: {
-            include: { state: true }
-          }
-        }
-      }
-    },
     take: 10
   });
 
-  const data = villages.map(v => ({
-    value: v.id,
-    label: v.name,
-    fullAddress: `${v.name}, ${v.subDistrict.name}, ${v.subDistrict.district.name}, ${v.subDistrict.district.state.name}, India`
-  }));
-
-  sendResponse(res, data, start);
+  res.json({ data: villages });
 });
 
-/* ===============================
-   VERSIONING
-================================ */
 app.use("/v1", router);
 
-/* ===============================
-   🔥 FINAL SERVER FIX
-================================ */
+/* ✅ FINAL */
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT} 🚀`);
 });
