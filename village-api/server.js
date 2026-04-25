@@ -1,6 +1,5 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
-const redis = require("./redis");
 const crypto = require("crypto");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
@@ -9,20 +8,40 @@ const bcrypt = require("bcrypt");
 const app = express();
 const prisma = new PrismaClient();
 const router = express.Router();
+
+/* ===============================
+   🔥 PORT FIX (CRITICAL FOR RENDER)
+================================ */
 const PORT = process.env.PORT || 3000;
 
+/* ===============================
+   🔥 CORS (ALLOW FRONTEND)
+================================ */
 app.use(cors({
-  origin: ["http://localhost:3001"],
+  origin: [
+    "http://localhost:3001",
+    "https://your-vercel-app.vercel.app" // update after deploy
+  ],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization", "x-api-key", "x-api-secret"]
 }));
 
 app.use(express.json());
 
-const SECRET = "mysecret123";
+/* ===============================
+   🔥 ROOT ROUTE (IMPORTANT FOR TEST)
+================================ */
+app.get("/", (req, res) => {
+  res.send("Backend is LIVE 🚀");
+});
 
 /* ===============================
-   ✅ STEP 2: STANDARD RESPONSE
+   🔐 SECRET (USE ENV IN PROD)
+================================ */
+const SECRET = process.env.JWT_SECRET || "mysecret123";
+
+/* ===============================
+   ✅ STANDARD RESPONSE
 ================================ */
 function sendResponse(res, data, start) {
   const responseTime = Date.now() - start;
@@ -36,7 +55,7 @@ function sendResponse(res, data, start) {
 }
 
 /* ===============================
-   🔐 JWT LOGIN
+   🔐 JWT AUTH
 ================================ */
 function requireLogin(req, res, next) {
   const token = req.headers["authorization"];
@@ -52,7 +71,7 @@ function requireLogin(req, res, next) {
 }
 
 /* ===============================
-   🔐 USAGE LIMIT
+   🔐 LIMIT LOGIC
 ================================ */
 async function checkUsageLimit(userId) {
   const today = new Date();
@@ -74,7 +93,7 @@ function getLimitByPlan(planType) {
 }
 
 /* ===============================
-   🔐 STEP 6: API KEY AUTH + RATE LIMIT HEADERS
+   🔐 API KEY AUTH
 ================================ */
 async function authenticate(req, res, next) {
   const apiKey = req.headers["x-api-key"];
@@ -97,7 +116,6 @@ async function authenticate(req, res, next) {
   const usage = await checkUsageLimit(key.userId);
   const limit = getLimitByPlan(key.user.planType);
 
-  // ✅ STEP 6
   res.set({
     "X-RateLimit-Limit": limit,
     "X-RateLimit-Remaining": limit === Infinity ? "∞" : limit - usage
@@ -133,6 +151,8 @@ app.post("/login", async (req, res) => {
 
   const user = await prisma.user.findUnique({ where: { email } });
 
+  if (!user) return res.status(404).json({ error: "User not found" });
+
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(400).json({ error: "Invalid password" });
 
@@ -162,7 +182,7 @@ app.post("/generate-key", requireLogin, async (req, res) => {
 });
 
 /* ===============================
-   🌍 STEP 3: LOCATION APIs (STANDARD RESPONSE)
+   🌍 LOCATION APIs
 ================================ */
 router.get("/states", authenticate, async (req, res) => {
   const start = Date.now();
@@ -196,11 +216,10 @@ router.get("/villages/:subDistrictId", authenticate, async (req, res) => {
 });
 
 /* ===============================
-   🔍 STEP 4: SEARCH (UPGRADED)
+   🔍 SEARCH
 ================================ */
 router.get("/search", authenticate, async (req, res) => {
   const start = Date.now();
-
   let { q = "", limit = 20 } = req.query;
 
   if (q.length < 2) {
@@ -218,7 +237,7 @@ router.get("/search", authenticate, async (req, res) => {
 });
 
 /* ===============================
-   ⚡ STEP 5: AUTOCOMPLETE
+   ⚡ AUTOCOMPLETE
 ================================ */
 router.get("/autocomplete", authenticate, async (req, res) => {
   const start = Date.now();
@@ -252,24 +271,13 @@ router.get("/autocomplete", authenticate, async (req, res) => {
 });
 
 /* ===============================
-   📊 USAGE
-================================ */
-router.get("/usage", authenticate, async (req, res) => {
-  const count = await prisma.apiLog.count({
-    where: { userId: req.apiKey.userId }
-  });
-
-  res.json({ usage: count });
-});
-
-/* ===============================
-   ✅ STEP 1: VERSIONING
+   VERSIONING
 ================================ */
 app.use("/v1", router);
 
 /* ===============================
-   SERVER
+   🔥 FINAL SERVER FIX
 ================================ */
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT} 🚀`);
 });
